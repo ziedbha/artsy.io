@@ -11,7 +11,7 @@
     "stats-js": "^1.0.0-alpha1",
     "three": "^0.87.1",
     "three-js": "^79.0.0",
-    "three-pointer-lock-controls": "^1.0.0",
+    "three-orbitcontrols": "^1.2.1",
     "webgl-debug": "^1.0.2"
   },
   "devDependencies": {
@@ -20,7 +20,7 @@
     "babel-minify-webpack-plugin": "^0.2.0",
     "babel-preset-env": "^1.6.0",
     "webpack": "^3.7.1",
-    "webpack-dev-server": ">=3.1.11",
+    "webpack-dev-server": "^3.1.11",
     "webpack-glsl-loader": "^1.0.1"
   }
 }
