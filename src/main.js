@@ -1,67 +1,39 @@
 import { makeRenderLoop, camera, renderer, scene} from './init';
-
 var THREE = require('three');
 
-const sizeMultiplier = 2;
-var geom = new THREE.BoxGeometry(sizeMultiplier * 3, sizeMultiplier * 1.5, 0.1);
-var mat = new THREE.MeshBasicMaterial({
-  color: 0xFFFFFF,
-  wireframe: false
-});
-var cube = new THREE.Mesh(geom, mat);
-scene.add(cube);
-
-var material = new THREE.LineBasicMaterial( { color: 0x5c42f4 } );
-var geometry = new THREE.Geometry();
-geometry.vertices.push(new THREE.Vector3( -1, 0, 1) );
-geometry.vertices.push(new THREE.Vector3( 0, 1, 1) );
-geometry.vertices.push(new THREE.Vector3( 1, 0, 1) );
-var line = new THREE.Line( geometry, material );
-scene.add( line );
-
-var g = new THREE.CircleGeometry( 1, 30 );
-var m = new THREE.MeshBasicMaterial( { color: 0xf44141 } );
-g.translate(0,0,0.1);
-var circle = new THREE.Mesh( g, m);
-scene.add(circle);
-
 function createSkybox() {
-  let geometry = new THREE.CubeGeometry(1200, 1200, 1200);
-  let cubeMats = [
-    new THREE.MeshLambertMaterial({
-      map: new THREE.TextureLoader().load('../images/front.png'), 
-      side: THREE.DoubleSide
-    }),
-    new THREE.MeshLambertMaterial({
-      map: new THREE.TextureLoader().load('../images/back.png'), 
-      side: THREE.DoubleSide
-    }),
-    new THREE.MeshLambertMaterial({
-      map: new THREE.TextureLoader().load('../images/top.png'), 
-      side: THREE.DoubleSide
-    }),
-    new THREE.MeshLambertMaterial({
-      map: new THREE.TextureLoader().load('../images/bot.png'), 
-      side: THREE.DoubleSide
-    }),
-    new THREE.MeshLambertMaterial({
-      map: new THREE.TextureLoader().load('../images/right.png'), 
-      side: THREE.DoubleSide
-    }),
-    new THREE.MeshLambertMaterial({
-      map: new THREE.TextureLoader().load('../images/left.png'), 
-      side: THREE.DoubleSide
-    }),
-  ];
+  // skybox
+  var skyGeo = new THREE.SphereGeometry(10000, 80, 80); 
+  var loader  = new THREE.TextureLoader();
+  var texture = loader.load( "../images/top.png" );
+  var material = new THREE.MeshPhongMaterial({ 
+    map: texture,
+  });
+  var sky = new THREE.Mesh(skyGeo, material);
+  sky.material.side = THREE.DoubleSide;
+  scene.add(sky);
 
-  var cubeMaterial = new THREE.MeshFaceMaterial(cubeMats);
-  var cube = new THREE.Mesh(geometry, cubeMaterial);
-  scene.add(cube);
+  // ground 
+  var groundGeo = new THREE.BoxGeometry(5000, 5000, 3);
+  var texture2 = loader.load( "../images/back.png" );
+  var material2 = new THREE.MeshPhongMaterial({ 
+    map: texture2,
+  });
+  let ground = new THREE.Mesh(groundGeo, material2);
+  ground.material.side = THREE.DoubleSide;
+  ground.rotation.x = 90 * 3.14 / 180; // 90 degrees around x-axis
+  ground.position.y = -30;
+  scene.add(ground);
 };
 
+function createLight() {
+  var ambientLight = new THREE.AmbientLight(0xffffff, 1);
+  scene.add(ambientLight)
+}
+
+// running code
 createSkybox();
-var ambientLight = new THREE.AmbientLight(0xffffff, 2.5);
-scene.add(ambientLight)
+createLight();
 
 function render() {
   camera.position.set(0, 0, 0);
