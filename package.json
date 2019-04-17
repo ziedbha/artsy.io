@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "start": "webpack-dev-server",
-    "start:production": "webpack-dev-server --env.production",
-    "build": "webpack --env.production"
+    "build": "browserify src/main.js -o src/bundle.js",
+    "run": "node server.js",
+    "start": "browserify src/main.js -o src/bundle.js | node server.js"
   },
   "babel": {
     "presets": [

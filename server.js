@@ -16,7 +16,6 @@ var bodyParser = require('body-parser')
 var cookieSession = require('cookie-session')
 
 var accountRoutes = require('./src/routes/account.js')
-var isAuthenticated = require('./src/middlewares/isAuthenticated.js')
 
 // instantiate express app...
 var app = express();
@@ -44,15 +43,12 @@ app.get('/', function (req, res, next) {
   console.log("User logged in: "  + req.session.user);
   if (req.session.user) {
     console.log("Main Page");
-    res.sendFile('/static/middlewares/playGame.js')
     res.render('index', {});
-    
   } else {
     res.redirect('/account/login')
   }
 });
 
-//app.use(playGame);
 app.use('/static', express.static(path.join(__dirname, 'src')))
 
 app.use('/account', accountRoutes)
