@@ -1,5 +1,4 @@
 var Init = require('./init'); 
-//import { makeRenderLoop, camera, renderer, scene} from './init';
 var THREE = require('three');
 var scene = Init.scene;
 var makeRenderLoop = Init.makeRenderLoop;
@@ -10,7 +9,7 @@ function createSkybox() {
   // skybox
   var skyGeo = new THREE.SphereGeometry(10000, 80, 80); 
   var loader  = new THREE.TextureLoader();
-  var texture = loader.load( "../images/top.png" );
+  var texture = loader.load("static/images/top.png" );
   var material = new THREE.MeshPhongMaterial({ 
     map: texture,
   });
@@ -20,7 +19,7 @@ function createSkybox() {
 
   // ground 
   var groundGeo = new THREE.BoxGeometry(5000, 5000, 3);
-  var texture2 = loader.load( "../images/back.png" );
+  var texture2 = loader.load("static/images/back.png" );
   var material2 = new THREE.MeshPhongMaterial({ 
     map: texture2,
   });
@@ -42,13 +41,13 @@ function render() {
   renderer.autoClear = false;
 }
 
-var kek = function startGame() {
-  Init.setupInitial();
+function startGame() {
+  //Init.setupInitial();
   createSkybox();
   createLight();
   makeRenderLoop(render)();
 } 
 
-module.exports = { 
-  kek
-}
+startGame()
+
+module.exports = { startGame }

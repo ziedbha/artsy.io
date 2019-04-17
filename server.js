@@ -4,14 +4,19 @@
 // - cookie-session
 // - mongoose
 // - various other file imports
+
+require('babel-register')({
+  presets: [ 'env' ]
+})
+
+var path = require('path')
 var express = require('express')
 var mongoose = require('mongoose')
 var bodyParser = require('body-parser')
 var cookieSession = require('cookie-session')
 
-var accountRoutes = require('./routes/account.js')
-var isAuthenticated = require('./middlewares/isAuthenticated.js')
-var playGame = require('./middlewares/playGame.js')
+var accountRoutes = require('./src/routes/account.js')
+var isAuthenticated = require('./src/middlewares/isAuthenticated.js')
 
 // instantiate express app...
 var app = express();
@@ -23,7 +28,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/js197-art
 app.engine('html', require('ejs').__express);
 app.set('view engine', 'html');
 
-// // set up body parser..
+app.use('/static', express.static(path.join(__dirname, 'src')))
+
+// set up body parser..
 app.use(bodyParser.urlencoded({ extended: false }))
 
 // // set up cookie session ...
@@ -37,14 +44,16 @@ app.get('/', function (req, res, next) {
   console.log("User logged in: "  + req.session.user);
   if (req.session.user) {
     console.log("Main Page");
+    res.sendFile('/static/middlewares/playGame.js')
     res.render('index', {});
-    //playGame();
+    
   } else {
     res.redirect('/account/login')
   }
 });
 
 //app.use(playGame);
+app.use('/static', express.static(path.join(__dirname, 'src')))
 
 app.use('/account', accountRoutes)
 

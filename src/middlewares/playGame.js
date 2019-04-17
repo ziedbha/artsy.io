@@ -1,7 +1,9 @@
-var main = require('../main')
+var startGame = require('../main').startGame
+
+startGame()
 
 var playGame = function () {
-  main.kek();
+  
   //next();
 }
 
