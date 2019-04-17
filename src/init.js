@@ -1,59 +1,69 @@
-export const DEBUG = false && process.env.NODE_ENV === 'development';
-import Stats from 'stats-js';
-import { Spector } from 'spectorjs';
+const DEBUG = false && process.env.NODE_ENV === 'development';
+var Stats = require('stats-js');
+// var Spector = require('spectorjs').spector;
+const performance = require('perf_hooks').performance;
 var THREE = require('three');
 var PointerLockControls = require('../src/three-js/PointerLockControls')
 var Player = require('./player');
 
-export var ABORTED = false;
-export function abort(message) {
+var ABORTED = false;
+function abort(message) {
   ABORTED = true;
   throw message;
 }
 
-// Keep track of time for game loop stuff
-var prevTime = performance.now();
+let prevTime = null; // timer to do velocity computations
+let canvas = null;
+let stats = null;
+let player = null;
 
-// Get the canvas element
-export const canvas = document.getElementById('canvas');
+// THREEJS structs: camera, pointer lock controls
+let camera = null;
+let camControls = null;
+let scene = new THREE.Scene();
+let renderer = null;
 
-// Initialize the Scene
-export var scene = new THREE.Scene();
+function setupInitial() {
+  prevTime = null; performance.now();
+  canvas = document.getElementById('canvas');
+  stats = new Stats();
 
-// Initialize statistics widget
-const stats = new Stats();
-stats.setMode(1); // 0: fps, 1: ms
-stats.domElement.style.position = 'absolute';
-stats.domElement.style.left = '0px';
-stats.domElement.style.top = '0px';
-document.body.appendChild(stats.domElement);
+  // FPS stats
+  stats.setMode(1); // 0: fps, 1: ms
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.left = '0px';
+  stats.domElement.style.top = '0px';
+  document.body.appendChild(stats.domElement);
 
-// Initialize camera and pointer lock controls
-export const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50000);
-var camControls = new THREE.PointerLockControls(camera, canvas);
-scene.add(camControls.getObject());
-initializePointerLockControls();
+  // Camera and canvas
+  camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50000);
+  camControls = new THREE.PointerLockControls(camera, canvas);
+  scene.add(camControls.getObject());
+  initializePointerLockControls();
 
-var player = new Player(camera, camControls);
-player.initializeKeyControls();
+  // Player init
+  player = new Player(camera, camControls);
+  player.initializeKeyControls();
 
-// Adjust size of camera and canvas
-setSize(canvas.clientWidth, canvas.clientHeight);
-window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
+  // Adjust size of camera and canvas
+  setSize(canvas.clientWidth, canvas.clientHeight);
+  window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
 
-// Initialize Renderer
-export var renderer = new THREE.WebGLRenderer({canvas: canvas});
-renderer.setRenderTarget
-renderer.setSize(canvas.width, canvas.height);
+  // Initialize Renderer
+  renderer = new THREE.WebGLRenderer({canvas: canvas});
+  renderer.setRenderTarget
+  renderer.setSize(canvas.width, canvas.height);
 
-// Debug mode
-if (DEBUG) {
-  const spector = new Spector();
-  spector.displayUI();
+  // Debug mode
+  if (DEBUG) {
+    const spector = new Spector();
+    spector.displayUI();
+  }
+
 }
 
 // Creates a render loop
-export function makeRenderLoop(render) {
+function makeRenderLoop(render) {
   return function tick() {
     // pre-render stuff
     var time = performance.now();
@@ -106,6 +116,8 @@ function initializePointerLockControls() {
   
   } );
 }
+
+module.exports = {setupInitial, DEBUG, makeRenderLoop, renderer, camera, scene, canvas, abort, ABORTED}
 
 // import the main application
 require('./main');

@@ -1,5 +1,10 @@
-import { makeRenderLoop, camera, renderer, scene} from './init';
+var Init = require('./init'); 
+//import { makeRenderLoop, camera, renderer, scene} from './init';
 var THREE = require('three');
+var scene = Init.scene;
+var makeRenderLoop = Init.makeRenderLoop;
+var renderer = Init.renderer;
+var camera = Init.camera;
 
 function createSkybox() {
   // skybox
@@ -31,14 +36,19 @@ function createLight() {
   scene.add(ambientLight)
 }
 
-// running code
-createSkybox();
-createLight();
-
 function render() {
   camera.position.set(0, 0, 0);
   renderer.render(scene, camera);
   renderer.autoClear = false;
 }
 
-makeRenderLoop(render)();
+var kek = function startGame() {
+  Init.setupInitial();
+  createSkybox();
+  createLight();
+  makeRenderLoop(render)();
+} 
+
+module.exports = { 
+  kek
+}

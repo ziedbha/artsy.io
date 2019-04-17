@@ -1,7 +1,6 @@
 var THREE = require('three')
 var DrawingCanvas = require('./drawingCanvas')
 
-const canvasDepthSpawnOffset = 3;
 class Player {
   constructor(camera, cameraControls) {
     this.cam = camera
@@ -32,7 +31,7 @@ class Player {
       }
   
       let pos = this.ctrls.getObject().position;
-      let camDir = new THREE.Vector3(); // create once and reuse it!
+      let camDir = new THREE.Vector3();
       this.cam.getWorldDirection(camDir);
   
       this.drawingCanvas.canvas.position.x = pos.x;
