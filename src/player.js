@@ -1,10 +1,12 @@
 var THREE = require('three')
+var GLTFLoader = require('../src/three-js/GLTFLoader');
 var DrawingCanvas = require('./drawingCanvas')
 
 class Player {
   constructor(camera, cameraControls) {
     this.cam = camera
     this.ctrls = cameraControls
+    this.username = null;
 
     this.ctrls.enabled = true;
     this.ctrls.getObject().position.set(0, 0, 3);
@@ -23,7 +25,11 @@ class Player {
 
     this.pressedToSpawn = false;
     this.spawnCanvas = false;
-  }  
+  }
+
+  setUsername(username) {
+    this.username = username
+  }
 
   trySpawnCanvas(scene) {
     if (!this.spawnedCanvas) {
@@ -61,6 +67,26 @@ class Player {
     }
   }
 
+  createCrosshairs() {
+    let crosshairs = new THREE.Group();
+    let geom1 = new THREE.CircleGeometry(0.018, 18);
+    let mat1 = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    var circle1 = new THREE.Mesh(geom1, mat1);
+    circle1.position.x = 0;
+    circle1.position.y = 0
+    circle1.position.z = -1
+    crosshairs.add(circle1);
+
+    let geom2 = new THREE.CircleGeometry(0.01, 18);
+    let mat2 = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    var circle2 = new THREE.Mesh(geom2, mat2);
+    circle2.position.x = 0;
+    circle2.position.y = 0
+    circle2.position.z = -0.9
+    crosshairs.add(circle2);
+    this.ctrls.getInnerObject().add(crosshairs)
+  }
+
   move(velocity, dt) {
     this.ctrls.getObject().translateX(velocity.x * dt);
     this.ctrls.getObject().translateY(velocity.y * dt);
@@ -68,7 +94,7 @@ class Player {
   }
 
   controlUpdate(dt) {
-    if (this.ctrls.enabled) {
+    if (this.ctrls.isLocked) {
       this.velocity.x -= this.velocity.x * 10.0 * dt;
       this.velocity.y -= this.velocity.y * 10.0 * dt;
       this.velocity.z -= this.velocity.z * 10.0 * dt;

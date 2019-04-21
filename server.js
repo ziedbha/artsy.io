@@ -14,6 +14,8 @@ var apiRoutes = require('./src/routes/api.js');
 
 // instantiate express app...
 var app = express();
+var http = require('http').Server(app)
+var io = require('socket.io')(http)
 
 // instantiate a mongoose connect call
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/js197-artsy-io')
@@ -35,7 +37,7 @@ app.use(cookieSession({
 }))
 
 app.get('/', function (req, res, next) {
-  console.log("User logged in: "  + req.session.user);
+  //console.log("User logged in: "  + req.session.user);
   if (req.session.user) {
     console.log("Main Page");
     res.render('index', {});
@@ -44,21 +46,12 @@ app.get('/', function (req, res, next) {
   }
 });
 
-app.post('/', function (req, res, next) {
-  console.log("Posting to /");
- // var data = req.body.drawings
-
-  // var drawings = req.body.drawings
-  // var pwd = req.body.password_signup
-  // var dbPlayerData = new PlayerData({ drawings: drawings })
-  // dbUser.save(function (err, result) {
-  //     if (!err) {
-  //         res.redirect('/account/login')
-  //     } else {
-  //         next(err)
-  //     }
-  // })
-});
+io.on('connection', function(socket) {
+  console.log('Socket.io: user connected!')
+  socket.on('tellThemToDrawMe', function(data) {
+    socket.broadcast.emit("drawSomeone", data)
+  })
+})
 
 app.use('/static', express.static(path.join(__dirname, 'src')))
 
@@ -66,12 +59,11 @@ app.use('/api', apiRoutes)
 
 app.use('/account', accountRoutes)
 
-
-// // don't put any routes below here!
+// don't put any routes below here!
 app.use(function (err, req, res, next) {
   return res.send('ERROR :  ' + err.message)
 })
 
-app.listen(process.env.PORT || 3000, function () {
+http.listen(process.env.PORT || 3000, function () {
   console.log('App listening on port ' + (process.env.PORT || 3000))
 })

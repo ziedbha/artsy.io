@@ -88,6 +88,18 @@ THREE.PointerLockControls = function ( camera, domElement ) {
 
 	};
 
+	this.getInnerObject = function () {
+
+		return pitchObject;
+
+	};
+
+	this.getRotation = function () {
+		var lol = new THREE.Euler( 0, 0, 0, 'YXZ' );
+		lol.set( pitchObject.rotation.x, yawObject.rotation.y, 0 );
+		return lol
+	};
+
 	this.getDirection = function () {
 
 		// assumes the camera itself is not rotated

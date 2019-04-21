@@ -5,6 +5,7 @@ var Stats = require('stats-js');
 var THREE = require('three');
 var PointerLockControls = require('../src/three-js/PointerLockControls')
 var Player = require('./player');
+var socket = require('./realtime')
 
 var ABORTED = false;
 function abort(message) {
@@ -20,9 +21,10 @@ let camera = null;
 let camControls = null;
 let scene = new THREE.Scene();
 let renderer = null;
-var playerDrawings = null;
-
-let centerOfScreen = new THREE.Vector2(0,0);
+let playerDrawings = null;
+let playerModel = null;
+let playerAdded = false;
+let loaded = false;
 
 // Setup
 prevTime = performance.now();
@@ -45,10 +47,17 @@ initializePointerLockControls();
 // Player init
 player = new Player(camera, camControls);
 player.initializeKeyControls();
+player.createCrosshairs()
 
 // Adjust size of camera and canvas
 setSize(canvas.clientWidth, canvas.clientHeight);
-window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
+window.addEventListener( 'resize', onWindowResize, false );
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+}
 
 // Initialize Renderer
 renderer = new THREE.WebGLRenderer({canvas: canvas});
@@ -60,20 +69,97 @@ var camDir = new THREE.Vector3();
 camDir  = camControls.getDirection(camDir);
 let raycaster = new THREE.Raycaster(camControls.getObject().position, camDir, 0.1, 50000);
 
+// Setup updating state of other connected sockets
+function drawOthers() {
+  if (loaded) {
+    socket.allowOthersToDraw = false;
+    var loader = new THREE.ObjectLoader();
+      for (var key in socket.othersToDraw) {
+        if (socket.othersToDraw.hasOwnProperty(key)) {
+          var obj = socket.othersToDraw[key];
+          for (var dataProp in obj) {
+            if (obj.hasOwnProperty(dataProp)) {
+              switch(dataProp) {
+                case "canvas":
+                  var sceneObj = scene.getObjectByName(key)
+                  scene.remove(sceneObj)
+                  
+                  var objToAdd = loader.parse(JSON.parse(obj[dataProp]))
+                  objToAdd.name = key
+                  scene.add(objToAdd)
+                  break;
+                case "position":
+                  var rotation = JSON.parse(obj["rotation"])  
+                  var position = JSON.parse(obj["position"])
+
+                  var eurlerRot = new THREE.Euler(-rotation._x, rotation._y + 3.14, rotation._z, 'YXZ')
+                  var quat = new THREE.Quaternion()
+                  quat.setFromEuler(eurlerRot)
+                  playerModel.setRotationFromQuaternion(quat)
+
+                  playerModel.position.x = position.x
+                  playerModel.position.y = position.y
+                  playerModel.position.z = position.z
+                  if (!playerAdded) {
+                    scene.add(playerModel)
+                    playerAdded = true;
+                  }
+                  
+                  break;
+                case "rotation":
+                  break;
+              }
+           }
+          } 
+       }
+    }
+    socket.allowOthersToDraw = true;
+  }
+}
+setInterval(drawOthers, 50);
+
+function loadPlayerModel() {
+  var loader = new THREE.GLTFLoader();
+
+  loader.load('/static/models/gltf/BoomBox.glb', function (gltf) {
+    gltf.scene.scale.x = 70
+    gltf.scene.scale.y = 70
+    gltf.scene.scale.z = 70
+
+    playerModel = gltf.scene
+  }, undefined, function ( error ) {
+    console.error( error );
+  });
+}
+loadPlayerModel();
+
 // Creates a render loop
 function makeRenderLoop(render) {
   return function tick() {
-    // pre-render stuff
-    var time = performance.now();
-    var delta = (time - prevTime) / 1000;
-
+    loaded = true;
     if (playerDrawings) {
       player.drawingCanvas.setDrawings(playerDrawings);
       playerDrawings = null;
     }
-    player.controlUpdate(delta);
+
+    // pre-render stuff
     player.trySpawnCanvas(scene);
-    player.rotateCanvasTowardsPlayer(); 
+    player.rotateCanvasTowardsPlayer();
+
+    var time = performance.now();
+    var delta = (time - prevTime) / 1000;
+    player.controlUpdate(delta);
+
+    if (player.username) {
+      var dataForSocket = {
+        username: player.username,
+        position: JSON.stringify(camControls.getObject().position),
+        rotation: JSON.stringify(camControls.getRotation()),
+        canvas: JSON.stringify(player.drawingCanvas.canvas).toString()
+      }
+      socket.emit('tellThemToDrawMe', dataForSocket)
+      socket.checkOthers()
+    }
 
     // rendering here
     stats.begin();
@@ -88,24 +174,22 @@ function makeRenderLoop(render) {
   }
 }
 
+// onclick: drawing circle
 window.onclick = function(event) {
-  camDir  = camControls.getDirection(camDir);
-  raycaster.set(camControls.getObject().position, camDir);
-  var intersects = raycaster.intersectObjects([player.drawingCanvas.canvas])
-  if (intersects.length > 0) {
-    var uv = intersects[0].uv;
-    console.log(uv)
-
-
-    let geom = new THREE.CircleGeometry(1, 30);
-    var x = uv.x - 0.5;
-    var y = uv.y - 0.5;
-    geom.translate(x * player.drawingCanvas.canvasWidth, y * player.drawingCanvas.canvasHeight, 0.1);
-    let mat = new THREE.MeshBasicMaterial({ color: 0xf44141 });
-    circle = new THREE.Mesh(geom, mat);
-    player.drawingCanvas.canvas.add(circle);
+  var gamePlaying = camControls.isLocked
+  if (gamePlaying) {
+    camDir  = camControls.getDirection(camDir);
+    raycaster.set(camControls.getObject().position, camDir);
+    var intersects = raycaster.intersectObjects([player.drawingCanvas.canvas])
+    if (intersects.length > 0) {
+      var uv = intersects[0].uv;
+      switch(player.drawingCanvas.drawMode) {
+        case 'CIRCLE':
+          player.drawingCanvas.drawCircle(uv);
+          break;
+      }
+    }
   }
-  
 }
 
 /********************************* HELPER FUNCTIONS *********************************/
@@ -135,21 +219,35 @@ function initializePointerLockControls() {
   } );
 }
 
-
 $(document).ready(function () {
   getDrawings();
-  // now do it  every 2.5 seconds
-  //setInterval(getQuestions, 2500);
-  
   function getDrawings() {
     $.ajax({
       url: '/api/getDrawings',
       type: 'GET',
       success: function(res) {
-        console.log(res)
         playerDrawings = res.drawings;
+        player.setUsername(res.username)
       }
     })
+  }
+
+  setInterval(saveDrawings, 1000);
+  function saveDrawings() {
+    if (camControls.isLocked) {
+      var drawingsInJSON = []
+      for (let i = 0; i < player.drawingCanvas.drawings.length; i++) {
+        drawingsInJSON[i] = JSON.stringify(player.drawingCanvas.drawings[i]).toString()
+      }
+      
+      $.ajax({
+        url: '/api/saveDrawings',
+        data: {drawings: drawingsInJSON, length: player.drawingCanvas.drawings.length},
+        type: 'POST',
+        success: function(res) {
+        }
+      })
+    } 
   }
 
   $('#logout').on('click', function () {
@@ -164,7 +262,6 @@ $(document).ready(function () {
       data: {drawings: drawingsInJSON, length: player.drawingCanvas.drawings.length},
       type: 'POST',
       success: function(res) {
-        //console.log(res.drawings)
         window.location.replace('account/login')
       }
     })

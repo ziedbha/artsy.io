@@ -6,30 +6,38 @@ var isAuthenticated = require('../middlewares/isAuthenticated.js')
 var router = express.Router();
 
 router.get('/getDrawings', function (req, res, next) {
+  console.log("Getting drawings")
   var username = req.session.user;
-  console.log(username);
   User.find({username: username}, function (err, result) {
     if (err) {
       return next(err)
     }
     res.json({ 
+      username: username,
       drawings: result[0].drawings
     })
   })
 })
 
 router.post('/saveDrawings', function (req, res, next) {
-  // var questionText = req.body.questionText        // ES6 shorthand
-  // var author = req.session.user
-  // console.log(req.body.questionText)
-  // var q = new Question({questionText: questionText, author: author }) // ES6 shorthand
-  // console.log(q)
-  // q.save(function (err, result) {
-  //   if (err) return res.send('ERROR :  ' + err.message) //next(err)
-  //   res.json({ 
-  //     status: 'OK'
-  //   })
-  // })
+  console.log("Saving drawings")
+  var username = req.session.user;
+  var drawings = null;
+  if (req.body.length == 0) {
+    drawings = []
+  } else if (req.body.length == 1) {
+    drawings = [req.body["drawings[]"]];
+  } else {
+    drawings = req.body["drawings[]"];
+  }
+
+  User.findOneAndUpdate({username: username}, 
+    {$set: {drawings: drawings}},
+    function (err, result) {
+      
+    if (err) next(err)
+    res.json({})
+  }) 
 })
 
 router.post('/logout', isAuthenticated, function (req, res, next) {
@@ -44,17 +52,14 @@ router.post('/logout', isAuthenticated, function (req, res, next) {
     drawings = req.body["drawings[]"];
   }
 
-  console.log(req.body)
+  req.session.user = ''
   User.findOneAndUpdate({username: username}, 
     {$set: {drawings: drawings}},
     function (err, result) {
       
     if (err) next(err)
-    res.json({ 
-      drawings: drawings
-    })
+    res.redirect('../account/login')
   }) 
-  req.session.user = ''
 })
 
 module.exports = router;

@@ -1,6 +1,7 @@
 var THREE = require('three');
 
 const sizeMultiplier = 10;
+const drawModes = ['CIRCLE', 'LINE']
 
 class DrawingCanvas {
   constructor(scene) {
@@ -19,33 +20,8 @@ class DrawingCanvas {
     this.drawings = [];
     this.canvas = canvasCube;
     this.canvas.name = "playerCanvas";
-
-    // let line = null
-    // {
-    //   let geom = new THREE.Geometry();
-    //   geom.vertices.push(new THREE.Vector3(-1, 0, 1));
-    //   geom.vertices.push(new THREE.Vector3(0, 1, 1));
-    //   geom.vertices.push(new THREE.Vector3(1, 0, 1));
-    //   let mat = new THREE.LineBasicMaterial({ color: 0x5c42f4 });
-    //   line = new THREE.Line(geom, mat);
-    // }
-    // this.drawings.push(line);
+    this.drawMode = drawModes[0];   
     
-    
-
-
-
-    // let circle = null;
-    // {
-    //   let geom = new THREE.CircleGeometry(1, 30);
-    //   geom.translate(0,0,0.1);
-    //   let mat = new THREE.MeshBasicMaterial({ color: 0xf44141 });
-    //   circle = new THREE.Mesh(geom, mat);
-    // }
-    
-    // for (let i = 0; i < this.drawings.length; i++) {
-    //   this.canvas.add(this.drawings[i]);
-    // }
     scene.add(this.canvas);
   }
 
@@ -56,6 +32,19 @@ class DrawingCanvas {
       this.drawings.push(obj);
       this.canvas.add(obj);
     }
+  }
+
+  drawCircle(uv) {
+    let geom = new THREE.CircleGeometry(1, 30);
+    var x = uv.x - 0.5;
+    var y = uv.y - 0.5;
+    let mat = new THREE.MeshBasicMaterial({ color: 0xf44141 });
+    var circle = new THREE.Mesh(geom, mat);
+    circle.position.x = x * this.canvasWidth;
+    circle.position.y = y * this.canvasHeight
+    circle.position.z = 0.1
+    this.canvas.add(circle);
+    this.drawings.push(circle);
   }
 }
 
