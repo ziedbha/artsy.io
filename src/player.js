@@ -19,6 +19,7 @@ class Player {
     this.moveUp = false;
     this.moveDown = false;
     this.drawingCanvas = null;
+    this.drawing = false;
 
     this.pressedToSpawn = false;
     this.spawnCanvas = false;
@@ -44,6 +45,19 @@ class Player {
       this.drawingCanvas.canvas.translateOnAxis(camDir, 20);
       this.drawingCanvas.canvas.lookAt(pos);
       this.spawnedCanvas = true;
+    }
+  }
+
+  rotateCanvasTowardsPlayer() {
+    if (this.drawingCanvas && !this.drawing) {
+      let pos = this.ctrls.getObject().position;
+      let camDir = new THREE.Vector3();
+      this.cam.getWorldDirection(camDir);
+
+      this.drawingCanvas.canvas.rotation.x = 0;
+      this.drawingCanvas.canvas.rotation.y = 0;
+      this.drawingCanvas.canvas.rotation.z = 0;
+      this.drawingCanvas.canvas.lookAt(pos);
     }
   }
 
@@ -108,6 +122,8 @@ class Player {
         case 81: // q
           player.moveDown = true;
           break;
+        case 13: // enter
+          player.drawing = !player.drawing;
         case 88: // x
           if (!player.pressedToSpawn) {
             player.pressedToSpawn = true;

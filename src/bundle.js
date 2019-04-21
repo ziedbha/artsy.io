@@ -44436,19 +44436,20 @@ const sizeMultiplier = 10;
 class DrawingCanvas {
   constructor(scene) {
     let canvasCube = null;
-    {
-      let geom = new THREE.BoxGeometry(sizeMultiplier * 3, sizeMultiplier * 1.5, 0.1);
-      let mat = new THREE.MeshBasicMaterial({
-        color: 0xFFFFFF,
-        wireframe: false
-      });
-      canvasCube = new THREE.Mesh(geom, mat);
-
-    }
+    this.canvasWidth = sizeMultiplier * 3
+    this.canvasHeight = sizeMultiplier * 1.5
+  
+    // make the canvas
+    let geom = new THREE.BoxGeometry(this.canvasWidth, this.canvasHeight, 0.1);
+    let mat = new THREE.MeshBasicMaterial({
+      color: 0xFFFFFF,
+      wireframe: false
+    });
+    canvasCube = new THREE.Mesh(geom, mat);
 
     this.drawings = [];
     this.canvas = canvasCube;
-    // this.canvas.position.x =  100;//new THREE.Vector3(10,10,10);
+    this.canvas.name = "playerCanvas";
 
     // let line = null
     // {
@@ -44459,7 +44460,12 @@ class DrawingCanvas {
     //   let mat = new THREE.LineBasicMaterial({ color: 0x5c42f4 });
     //   line = new THREE.Line(geom, mat);
     // }
+    // this.drawings.push(line);
     
+    
+
+
+
     // let circle = null;
     // {
     //   let geom = new THREE.CircleGeometry(1, 30);
@@ -44467,17 +44473,27 @@ class DrawingCanvas {
     //   let mat = new THREE.MeshBasicMaterial({ color: 0xf44141 });
     //   circle = new THREE.Mesh(geom, mat);
     // }
-    // this.drawings.push(circle, line);
-    // this.canvas.add(line);
-    // this.canvas.add(circle);
-
+    
+    // for (let i = 0; i < this.drawings.length; i++) {
+    //   this.canvas.add(this.drawings[i]);
+    // }
     scene.add(this.canvas);
+  }
+
+  setDrawings(drawings) {
+    var loader = new THREE.ObjectLoader();
+    for (let i = 0; i < drawings.length; i++) {
+      var obj = loader.parse(JSON.parse(drawings[i]));
+      this.drawings.push(obj);
+      this.canvas.add(obj);
+    }
   }
 }
 
 module.exports = DrawingCanvas
 },{"three":3}],5:[function(require,module,exports){
 (function (process){
+//var $ = require('../src/lib/jquery.min.js')
 const DEBUG = false && process.env.NODE_ENV === 'development';
 var Stats = require('stats-js');
 //const performance = require('perf_hooks').performance;
@@ -44491,48 +44507,53 @@ function abort(message) {
   throw message;
 }
 
-let prevTime = null; // timer to do velocity computations
+let prevTime = null;
 let canvas = null;
 let stats = null;
 let player = null;
-
-// THREEJS structs: camera, pointer lock controls
 let camera = null;
 let camControls = null;
 let scene = new THREE.Scene();
 let renderer = null;
+var playerDrawings = null;
 
-//function setupInitial() {
-  prevTime = performance.now();
-  canvas = document.getElementById('canvas');
-  stats = new Stats();
+let centerOfScreen = new THREE.Vector2(0,0);
 
-  // FPS stats
-  stats.setMode(1); // 0: fps, 1: ms
-  stats.domElement.style.position = 'absolute';
-  stats.domElement.style.left = '0px';
-  stats.domElement.style.top = '0px';
-  window.document.body.appendChild(stats.domElement);
+// Setup
+prevTime = performance.now();
+canvas = document.getElementById('canvas');
+stats = new Stats();
 
-  // Camera and canvas
-  camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50000);
-  camControls = new THREE.PointerLockControls(camera, canvas);
-  scene.add(camControls.getObject());
-  initializePointerLockControls();
+// FPS stats
+stats.setMode(1); // 0: fps, 1: ms
+stats.domElement.style.position = 'absolute';
+stats.domElement.style.left = '0px';
+stats.domElement.style.top = '0px';
+window.document.body.appendChild(stats.domElement);
 
-  // Player init
-  player = new Player(camera, camControls);
-  player.initializeKeyControls();
+// Camera and canvas
+camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50000);
+camControls = new THREE.PointerLockControls(camera, canvas);
+scene.add(camControls.getObject());
+initializePointerLockControls();
 
-  // Adjust size of camera and canvas
-  setSize(canvas.clientWidth, canvas.clientHeight);
-  window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
+// Player init
+player = new Player(camera, camControls);
+player.initializeKeyControls();
 
-  // Initialize Renderer
-  renderer = new THREE.WebGLRenderer({canvas: canvas});
-  renderer.setRenderTarget
-  renderer.setSize(canvas.width, canvas.height);
-//}
+// Adjust size of camera and canvas
+setSize(canvas.clientWidth, canvas.clientHeight);
+window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
+
+// Initialize Renderer
+renderer = new THREE.WebGLRenderer({canvas: canvas});
+renderer.setRenderTarget
+renderer.setSize(canvas.width, canvas.height);
+
+// Initialize Raycaster
+var camDir = new THREE.Vector3();
+camDir  = camControls.getDirection(camDir);
+let raycaster = new THREE.Raycaster(camControls.getObject().position, camDir, 0.1, 50000);
 
 // Creates a render loop
 function makeRenderLoop(render) {
@@ -44540,8 +44561,14 @@ function makeRenderLoop(render) {
     // pre-render stuff
     var time = performance.now();
     var delta = (time - prevTime) / 1000;
+
+    if (playerDrawings) {
+      player.drawingCanvas.setDrawings(playerDrawings);
+      playerDrawings = null;
+    }
     player.controlUpdate(delta);
     player.trySpawnCanvas(scene);
+    player.rotateCanvasTowardsPlayer(); 
 
     // rendering here
     stats.begin();
@@ -44554,6 +44581,26 @@ function makeRenderLoop(render) {
       requestAnimationFrame(tick);
     }
   }
+}
+
+window.onclick = function(event) {
+  camDir  = camControls.getDirection(camDir);
+  raycaster.set(camControls.getObject().position, camDir);
+  var intersects = raycaster.intersectObjects([player.drawingCanvas.canvas])
+  if (intersects.length > 0) {
+    var uv = intersects[0].uv;
+    console.log(uv)
+
+
+    let geom = new THREE.CircleGeometry(1, 30);
+    var x = uv.x - 0.5;
+    var y = uv.y - 0.5;
+    geom.translate(x * player.drawingCanvas.canvasWidth, y * player.drawingCanvas.canvasHeight, 0.1);
+    let mat = new THREE.MeshBasicMaterial({ color: 0xf44141 });
+    circle = new THREE.Mesh(geom, mat);
+    player.drawingCanvas.canvas.add(circle);
+  }
+  
 }
 
 /********************************* HELPER FUNCTIONS *********************************/
@@ -44582,6 +44629,42 @@ function initializePointerLockControls() {
     instructions.style.display = '';
   } );
 }
+
+
+$(document).ready(function () {
+  getDrawings();
+  // now do it  every 2.5 seconds
+  //setInterval(getQuestions, 2500);
+  
+  function getDrawings() {
+    $.ajax({
+      url: '/api/getDrawings',
+      type: 'GET',
+      success: function(res) {
+        console.log(res)
+        playerDrawings = res.drawings;
+      }
+    })
+  }
+
+  $('#logout').on('click', function () {
+    // grab current drawings associated with this player
+    var drawingsInJSON = []
+    for (let i = 0; i < player.drawingCanvas.drawings.length; i++) {
+      drawingsInJSON[i] = JSON.stringify(player.drawingCanvas.drawings[i]).toString()
+    }
+
+    $.ajax({
+      url: '/api/logout',
+      data: {drawings: drawingsInJSON, length: player.drawingCanvas.drawings.length},
+      type: 'POST',
+      success: function(res) {
+        //console.log(res.drawings)
+        window.location.replace('account/login')
+      }
+    })
+  })
+})
 
 module.exports = {DEBUG, makeRenderLoop, renderer, camera, scene, canvas, abort, ABORTED}
 
@@ -44662,6 +44745,7 @@ class Player {
     this.moveUp = false;
     this.moveDown = false;
     this.drawingCanvas = null;
+    this.drawing = false;
 
     this.pressedToSpawn = false;
     this.spawnCanvas = false;
@@ -44687,6 +44771,19 @@ class Player {
       this.drawingCanvas.canvas.translateOnAxis(camDir, 20);
       this.drawingCanvas.canvas.lookAt(pos);
       this.spawnedCanvas = true;
+    }
+  }
+
+  rotateCanvasTowardsPlayer() {
+    if (this.drawingCanvas && !this.drawing) {
+      let pos = this.ctrls.getObject().position;
+      let camDir = new THREE.Vector3();
+      this.cam.getWorldDirection(camDir);
+
+      this.drawingCanvas.canvas.rotation.x = 0;
+      this.drawingCanvas.canvas.rotation.y = 0;
+      this.drawingCanvas.canvas.rotation.z = 0;
+      this.drawingCanvas.canvas.lookAt(pos);
     }
   }
 
@@ -44751,6 +44848,8 @@ class Player {
         case 81: // q
           player.moveDown = true;
           break;
+        case 13: // enter
+          player.drawing = !player.drawing;
         case 88: // x
           if (!player.pressedToSpawn) {
             player.pressedToSpawn = true;

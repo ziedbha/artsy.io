@@ -1,3 +1,4 @@
+//var $ = require('../src/lib/jquery.min.js')
 const DEBUG = false && process.env.NODE_ENV === 'development';
 var Stats = require('stats-js');
 //const performance = require('perf_hooks').performance;
@@ -11,48 +12,53 @@ function abort(message) {
   throw message;
 }
 
-let prevTime = null; // timer to do velocity computations
+let prevTime = null;
 let canvas = null;
 let stats = null;
 let player = null;
-
-// THREEJS structs: camera, pointer lock controls
 let camera = null;
 let camControls = null;
 let scene = new THREE.Scene();
 let renderer = null;
+var playerDrawings = null;
 
-//function setupInitial() {
-  prevTime = performance.now();
-  canvas = document.getElementById('canvas');
-  stats = new Stats();
+let centerOfScreen = new THREE.Vector2(0,0);
 
-  // FPS stats
-  stats.setMode(1); // 0: fps, 1: ms
-  stats.domElement.style.position = 'absolute';
-  stats.domElement.style.left = '0px';
-  stats.domElement.style.top = '0px';
-  window.document.body.appendChild(stats.domElement);
+// Setup
+prevTime = performance.now();
+canvas = document.getElementById('canvas');
+stats = new Stats();
 
-  // Camera and canvas
-  camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50000);
-  camControls = new THREE.PointerLockControls(camera, canvas);
-  scene.add(camControls.getObject());
-  initializePointerLockControls();
+// FPS stats
+stats.setMode(1); // 0: fps, 1: ms
+stats.domElement.style.position = 'absolute';
+stats.domElement.style.left = '0px';
+stats.domElement.style.top = '0px';
+window.document.body.appendChild(stats.domElement);
 
-  // Player init
-  player = new Player(camera, camControls);
-  player.initializeKeyControls();
+// Camera and canvas
+camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50000);
+camControls = new THREE.PointerLockControls(camera, canvas);
+scene.add(camControls.getObject());
+initializePointerLockControls();
 
-  // Adjust size of camera and canvas
-  setSize(canvas.clientWidth, canvas.clientHeight);
-  window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
+// Player init
+player = new Player(camera, camControls);
+player.initializeKeyControls();
 
-  // Initialize Renderer
-  renderer = new THREE.WebGLRenderer({canvas: canvas});
-  renderer.setRenderTarget
-  renderer.setSize(canvas.width, canvas.height);
-//}
+// Adjust size of camera and canvas
+setSize(canvas.clientWidth, canvas.clientHeight);
+window.addEventListener('resize', () => setSize(canvas.clientWidth, canvas.clientHeight));
+
+// Initialize Renderer
+renderer = new THREE.WebGLRenderer({canvas: canvas});
+renderer.setRenderTarget
+renderer.setSize(canvas.width, canvas.height);
+
+// Initialize Raycaster
+var camDir = new THREE.Vector3();
+camDir  = camControls.getDirection(camDir);
+let raycaster = new THREE.Raycaster(camControls.getObject().position, camDir, 0.1, 50000);
 
 // Creates a render loop
 function makeRenderLoop(render) {
@@ -60,8 +66,14 @@ function makeRenderLoop(render) {
     // pre-render stuff
     var time = performance.now();
     var delta = (time - prevTime) / 1000;
+
+    if (playerDrawings) {
+      player.drawingCanvas.setDrawings(playerDrawings);
+      playerDrawings = null;
+    }
     player.controlUpdate(delta);
     player.trySpawnCanvas(scene);
+    player.rotateCanvasTowardsPlayer(); 
 
     // rendering here
     stats.begin();
@@ -74,6 +86,26 @@ function makeRenderLoop(render) {
       requestAnimationFrame(tick);
     }
   }
+}
+
+window.onclick = function(event) {
+  camDir  = camControls.getDirection(camDir);
+  raycaster.set(camControls.getObject().position, camDir);
+  var intersects = raycaster.intersectObjects([player.drawingCanvas.canvas])
+  if (intersects.length > 0) {
+    var uv = intersects[0].uv;
+    console.log(uv)
+
+
+    let geom = new THREE.CircleGeometry(1, 30);
+    var x = uv.x - 0.5;
+    var y = uv.y - 0.5;
+    geom.translate(x * player.drawingCanvas.canvasWidth, y * player.drawingCanvas.canvasHeight, 0.1);
+    let mat = new THREE.MeshBasicMaterial({ color: 0xf44141 });
+    circle = new THREE.Mesh(geom, mat);
+    player.drawingCanvas.canvas.add(circle);
+  }
+  
 }
 
 /********************************* HELPER FUNCTIONS *********************************/
@@ -102,5 +134,41 @@ function initializePointerLockControls() {
     instructions.style.display = '';
   } );
 }
+
+
+$(document).ready(function () {
+  getDrawings();
+  // now do it  every 2.5 seconds
+  //setInterval(getQuestions, 2500);
+  
+  function getDrawings() {
+    $.ajax({
+      url: '/api/getDrawings',
+      type: 'GET',
+      success: function(res) {
+        console.log(res)
+        playerDrawings = res.drawings;
+      }
+    })
+  }
+
+  $('#logout').on('click', function () {
+    // grab current drawings associated with this player
+    var drawingsInJSON = []
+    for (let i = 0; i < player.drawingCanvas.drawings.length; i++) {
+      drawingsInJSON[i] = JSON.stringify(player.drawingCanvas.drawings[i]).toString()
+    }
+
+    $.ajax({
+      url: '/api/logout',
+      data: {drawings: drawingsInJSON, length: player.drawingCanvas.drawings.length},
+      type: 'POST',
+      success: function(res) {
+        //console.log(res.drawings)
+        window.location.replace('account/login')
+      }
+    })
+  })
+})
 
 module.exports = {DEBUG, makeRenderLoop, renderer, camera, scene, canvas, abort, ABORTED}

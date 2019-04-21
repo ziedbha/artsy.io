@@ -1,10 +1,3 @@
-// - express
-// - path
-// - body-parser
-// - cookie-session
-// - mongoose
-// - various other file imports
-
 require('babel-register')({
   presets: [ 'env' ]
 })
@@ -15,7 +8,9 @@ var mongoose = require('mongoose')
 var bodyParser = require('body-parser')
 var cookieSession = require('cookie-session')
 
+// routers
 var accountRoutes = require('./src/routes/account.js')
+var apiRoutes = require('./src/routes/api.js');
 
 // instantiate express app...
 var app = express();
@@ -49,9 +44,28 @@ app.get('/', function (req, res, next) {
   }
 });
 
+app.post('/', function (req, res, next) {
+  console.log("Posting to /");
+ // var data = req.body.drawings
+
+  // var drawings = req.body.drawings
+  // var pwd = req.body.password_signup
+  // var dbPlayerData = new PlayerData({ drawings: drawings })
+  // dbUser.save(function (err, result) {
+  //     if (!err) {
+  //         res.redirect('/account/login')
+  //     } else {
+  //         next(err)
+  //     }
+  // })
+});
+
 app.use('/static', express.static(path.join(__dirname, 'src')))
 
+app.use('/api', apiRoutes)
+
 app.use('/account', accountRoutes)
+
 
 // // don't put any routes below here!
 app.use(function (err, req, res, next) {
