@@ -187,6 +187,13 @@ class Player {
         case 88: // x
           player.pressedToSpawn = false;
           break;
+        case 73: // i
+          player.drawingCanvas.drawMode = "LINE";
+          player.drawingCanvas.currentLine = null;
+          break;
+        case 79: // o
+          player.drawingCanvas.drawMode = "CIRCLE";
+          break;
       }
     };
     

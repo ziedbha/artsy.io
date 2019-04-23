@@ -3,6 +3,8 @@
     <head>
         <script src="/static/lib/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+        <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
         <style>
             html, body {
                 margin: 0;
@@ -12,37 +14,12 @@
                 overflow: hidden;
             }
 
-            button {
+            #logout {
                 position: absolute;
                 display: block;
                 z-index: 99;
                 left: 90%;
                 top: 90%;
-            }
-
-            .button {
-                background-color: #D3D3D3;
-                color: black;
-                padding: 10px;
-                border-radius: 10px;
-                -moz-border-radius: 10px;
-                -webkit-border-radius: 10px;
-                margin:10px
-            }
-            
-            .small-btn {
-                width: 50px;
-                height: 25px;
-            }
-            
-            .medium-btn {
-                width: 70px;
-                height: 30px;
-            }
-            
-            .big-btn {
-                width: 90px;
-                height: 40px;
             }
 
             #canvas {
@@ -95,15 +72,36 @@
     <body>
             <div id="blocker">
                     <div id="instructions">
-                        <span style="font-size:40px">Click to play</span>
-                        <br />
-                        (W, A, S, D = Move, SPACE/E = Up, Q = Down, X = Spawn Canvas, MOUSE = Look around)
+                            <div class="rows">
+                                    <div class="row">
+                                            <span class="title is-1 has-text-white" >Click to play</span>
+                                    </div>
+                                <div class="row">
+                                        <div class="columns">
+                                                <div class="column">
+                                                        <span class="title is-2 has-text-white">MOVING</span>
+                                                        <br />
+                                                        <span class="title is-5 has-text-white">(W, A, S, D = Move, SPACE/E = Up, Q = Down, MOUSE = Look around)</span>
+                                                        
+                                                </div>
+                                            <hr>
+                                                <div class="column">
+                                                        <span class="title is-2 has-text-white">DRAWING</span>
+                                                         <br />
+                                                         <span class="title is-5 has-text-white">(X = Spawn Canvas, ENTER = Stop Canvas From Moving, I = Line, O = Circle)</span>
+                                                        
+                                                </div>
+                                        </div>
+                                </div>
+
+                            </div>
+
                     </div>
         
                 </div>
 
         <canvas id="canvas"></canvas>
-        <button type="submit" class="button big-btn" id="logout">Logout</button>
+        <button type="submit" class="button is-danger has-text-white are-large" id="logout">Logout</button>
         
         <script  src="static/bundle.js"></script>
     </body>

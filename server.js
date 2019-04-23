@@ -48,6 +48,10 @@ app.get('/', function (req, res, next) {
 
 io.on('connection', function(socket) {
   console.log('Socket.io: user connected!')
+
+  socket.on('iAmDisconnected', function(data) {
+    socket.broadcast.emit("someoneDisconnected", data)
+  })
   socket.on('tellThemToDrawMe', function(data) {
     socket.broadcast.emit("drawSomeone", data)
   })

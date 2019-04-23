@@ -1,33 +1,36 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <style>
-            html, body {
-                margin: 0;
-                background-color: whitesmoke;
-                height: 100%;
-                width: 100%;
-                overflow: hidden;
-            }
-        </style>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+        <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
     </head>
     <body>
-        <h1>Log in</h1>
-        <form method="POST">
-          Username: <br/>
-          <input type="text" name="username_login"/> <br/>
-          Password: <br/>
-          <input type="password" name="password_login"/> <br/>
-          <button type="submit">Log in!</button> <br/>
-        </form>
-
-        <h1>Sign-up</h1>
-        <form method="POST">
-          Username: <br/>
-          <input type="text" name="username_signup"/> <br/>
-          Password: <br/>
-          <input type="password" name="password_signup"/> <br/>
-          <button type="submit">Sign-up!</button> <br/>
-        </form>
+            <h1 class="title is-1 is-vcentered">artsy.io</h1>
+            <hr>
+            <div class="rows">
+                <div class="row">
+                        <h1 class="title is-3">Log in</h1>
+                        <form method="POST">
+                          <label class="label">Username</label>
+                          <input type="text" placeholder="Text input" value="zied" name="username_login"/> <br/>
+                          <label class="label">Password</label>
+                          <input type="password" type="text"  name="password_login"/> <br/>
+                          <br/>
+                          <button type="submit" class="button is-primary" >Log in!</button> <br/>
+                        </form>
+                </div>
+            <hr>
+                <div class="row">
+                        <h1 class="title is-3">Sign-up</h1>
+                        <form method="POST">
+                          <label class="label">Username</label>
+                          <input type="text" placeholder="Text input" value="zied" name="username_signup"/> <br/>
+                          <label class="label">Password</label>
+                          <input type="password" name="password_signup"/> <br/>
+                          <br/>
+                          <button type="submit" class="button is-success">Sign-up!</button> <br/>
+                        </form>
+                </div>
+            </div>
     </body>
 </html>

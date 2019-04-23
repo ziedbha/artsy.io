@@ -1,7 +1,5 @@
-//var $ = require('../src/lib/jquery.min.js')
 const DEBUG = false && process.env.NODE_ENV === 'development';
 var Stats = require('stats-js');
-//const performance = require('perf_hooks').performance;
 var THREE = require('three');
 var PointerLockControls = require('../src/three-js/PointerLockControls')
 var Player = require('./player');
@@ -22,8 +20,6 @@ let camControls = null;
 let scene = new THREE.Scene();
 let renderer = null;
 let playerDrawings = null;
-let playerModel = null;
-let playerAdded = false;
 let loaded = false;
 
 // Setup
@@ -71,72 +67,79 @@ let raycaster = new THREE.Raycaster(camControls.getObject().position, camDir, 0.
 
 // Setup updating state of other connected sockets
 function drawOthers() {
-  if (loaded) {
-    socket.allowOthersToDraw = false;
-    var loader = new THREE.ObjectLoader();
-      for (var key in socket.othersToDraw) {
-        if (socket.othersToDraw.hasOwnProperty(key)) {
-          var obj = socket.othersToDraw[key];
-          for (var dataProp in obj) {
-            if (obj.hasOwnProperty(dataProp)) {
-              switch(dataProp) {
-                case "canvas":
-                  var sceneObj = scene.getObjectByName(key)
-                  scene.remove(sceneObj)
-                  
-                  var objToAdd = loader.parse(JSON.parse(obj[dataProp]))
-                  objToAdd.name = key
-                  scene.add(objToAdd)
-                  break;
-                case "position":
-                  var rotation = JSON.parse(obj["rotation"])  
-                  var position = JSON.parse(obj["position"])
+  socket.allowOthersUpdate = false;
+  var loader = new THREE.ObjectLoader();
+    for (var key in socket.othersToDraw) {
+      if (socket.othersToDraw.hasOwnProperty(key)) {
+        var otherUser = key
+        var obj = socket.othersToDraw[otherUser];
 
-                  var eurlerRot = new THREE.Euler(-rotation._x, rotation._y + 3.14, rotation._z, 'YXZ')
-                  var quat = new THREE.Quaternion()
-                  quat.setFromEuler(eurlerRot)
-                  playerModel.setRotationFromQuaternion(quat)
+        if (!obj) {
+          // player disconnected
+          var oldCanvas = scene.getObjectByName(otherUser + "_canvas")
+          var oldPlayerModel = scene.getObjectByName(otherUser + "_playerModel")
+          scene.remove(oldCanvas)
+          scene.remove(oldPlayerModel)
+        }
 
-                  playerModel.position.x = position.x
-                  playerModel.position.y = position.y
-                  playerModel.position.z = position.z
-                  if (!playerAdded) {
-                    scene.add(playerModel)
-                    playerAdded = true;
-                  }
-                  
-                  break;
-                case "rotation":
-                  break;
-              }
-           }
-          } 
-       }
-    }
-    socket.allowOthersToDraw = true;
+        if (!obj["position"] || !socket.loadedPlayerModels[otherUser]) {
+          // player hasn't sent complete or model isn't fully loaded
+          continue;
+        }
+
+        if (obj["disconnected"]) {
+          // player disconnected
+          scene.remove(scene.getObjectByName(otherUser + "_playerModel"))
+          scene.remove(scene.getObjectByName(otherUser + "_canvas"))
+          socket.othersToDraw[otherUser] = null
+          socket.loadedPlayerModels[otherUser] = null
+        }
+        
+        // create the new canvas
+        var canvasToAdd = loader.parse(JSON.parse(obj["canvas"]))
+        canvasToAdd.name = otherUser + "_canvas"
+        
+        // get player rotation and position
+        var rotation = JSON.parse(obj["rotation"])  
+        var position = JSON.parse(obj["position"])
+        var eurlerRot = new THREE.Euler(-rotation._x, rotation._y + 3.14, rotation._z, 'YXZ')
+        var quat = new THREE.Quaternion()
+        quat.setFromEuler(eurlerRot)
+
+        // fetch old state
+        var oldCanvas = scene.getObjectByName(otherUser + "_canvas")
+        var oldPlayerModel = scene.getObjectByName(otherUser + "_playerModel")
+        var playerModelToAdd = socket.loadedPlayerModels[otherUser].model
+
+        if (playerModelToAdd && !oldPlayerModel) {
+          playerModelToAdd.name = otherUser + "_playerModel"
+          scene.add(playerModelToAdd)
+          oldPlayerModel = playerModelToAdd
+        }
+
+        if (!oldCanvas) {
+          scene.add(canvasToAdd)
+        } else {
+          scene.remove(oldCanvas)
+          scene.add(canvasToAdd)
+        }
+
+        // set pos and rotation of player
+        if (oldPlayerModel) {
+          oldPlayerModel.setRotationFromQuaternion(quat)
+          oldPlayerModel.position.x = position.x
+          oldPlayerModel.position.y = position.y
+          oldPlayerModel.position.z = position.z    
+        }
+      }  
   }
+  socket.allowOthersUpdate = true;
 }
 setInterval(drawOthers, 50);
-
-function loadPlayerModel() {
-  var loader = new THREE.GLTFLoader();
-
-  loader.load('/static/models/gltf/BoomBox.glb', function (gltf) {
-    gltf.scene.scale.x = 70
-    gltf.scene.scale.y = 70
-    gltf.scene.scale.z = 70
-
-    playerModel = gltf.scene
-  }, undefined, function ( error ) {
-    console.error( error );
-  });
-}
-loadPlayerModel();
 
 // Creates a render loop
 function makeRenderLoop(render) {
   return function tick() {
-    loaded = true;
     if (playerDrawings) {
       player.drawingCanvas.setDrawings(playerDrawings);
       playerDrawings = null;
@@ -187,6 +190,11 @@ window.onclick = function(event) {
         case 'CIRCLE':
           player.drawingCanvas.drawCircle(uv);
           break;
+        case 'LINE':
+          player.drawingCanvas.drawLine(uv);
+          break;
+        default:
+          break;
       }
     }
   }
@@ -227,7 +235,9 @@ $(document).ready(function () {
       type: 'GET',
       success: function(res) {
         playerDrawings = res.drawings;
-        player.setUsername(res.username)
+        if (!player.username) {
+          player.setUsername(res.username)
+        }
       }
     })
   }
@@ -262,6 +272,7 @@ $(document).ready(function () {
       data: {drawings: drawingsInJSON, length: player.drawingCanvas.drawings.length},
       type: 'POST',
       success: function(res) {
+        socket.emit('iAmDisconnected', {username: player.username})
         window.location.replace('account/login')
       }
     })
